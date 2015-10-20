@@ -25,11 +25,26 @@ psiTurk.preloadPages(pages);
 
 var instructionPages = [ // add as a list as many pages as you like
     "instructions/instruct-1.html",
-    "instructions/instruct-2.html",
-    "instructions/instruct-3.html",
+    // "instructions/instruct-2.html",
+    // "instructions/instruct-3.html",
     "instructions/instruct-ready.html"
 ];
 
+var stims;
+d3.csv("static/stim.txt", function(data) {
+    stims = data.map(function(d) {
+        return {
+            stimnum: +d.stimnum,
+            truth: d.truth,
+            type: d.type,
+            level: +d.level,
+            hierarchy: d.hierarchy,
+            stimtext: d.stimtext
+        };
+    });
+});
+var trialnum = 0;
+var endOfBreak = false;
 
 /********************
  * HTML manipulation
@@ -41,6 +56,9 @@ var instructionPages = [ // add as a list as many pages as you like
  *
  ********************/
 
+
+
+
 /********************
  * STROOP TEST       *
  ********************/
@@ -49,19 +67,6 @@ var StroopExperiment = function() {
     var wordon, // time word is presented
         listening = false;
 
-    // Stimuli for a basic Stroop experiment
-    var stims = [
-        ["SHIP", "red", "unrelated"],
-        ["MONKEY", "green", "unrelated"],
-        ["ZAMBONI", "blue", "unrelated"],
-        ["RED", "red", "congruent"],
-        ["GREEN", "green", "congruent"],
-        ["BLUE", "blue", "congruent"],
-        ["GREEN", "red", "incongruent"],
-        ["BLUE", "green", "incongruent"],
-        ["RED", "blue", "incongruent"]
-    ];
-
     stims = _.shuffle(stims);
 
     var next = function() {
@@ -69,11 +74,13 @@ var StroopExperiment = function() {
             finish();
         }
         else {
+            d3.select("#prompt").html('Is this sentence true?')
             stim = stims.shift();
-            show_word( stim[0], stim[1] );
+            trialnum += 1;
+            show_word(stim.stimtext);
             wordon = new Date().getTime();
             listening = true;
-            d3.select("#query").html('<p id="prompt">Type "R" for Red, "B" for blue, "G" for green.</p>');
+            d3.select("#query").html('Type "F" for True, "J" for False.');
         }
     };
 
@@ -84,17 +91,19 @@ var StroopExperiment = function() {
             response;
 
         switch (keyCode) {
-        case 82:
-            // "R"
-            response="red";
+        case 70:
+            // "F"
+            response="T";
             break;
-        case 71:
-            // "G"
-            response="green";
+        case 74:
+            // "J"
+            response="F";
             break;
-        case 66:
-            // "B"
-            response="blue";
+        case 32:
+            if (endOfBreak) {
+                d3.select("#stim").html('');
+                setTimeout(next, 2000);
+            }
             break;
         default:
             response = "";
@@ -102,19 +111,39 @@ var StroopExperiment = function() {
         }
         if (response.length>0) {
             listening = false;
-            var hit = response == stim[1];
-            var rt = new Date().getTime() - wordon;
+            stim.hit = response === stim.truth;
+            stim.rt = new Date().getTime() - wordon;
+            stim.trialnum = trialnum;
+            stim.uniqueid = uniqueId;
+            finish_stim();
+        }
+    };
 
-            psiTurk.recordTrialData({'phase':"TEST",
-                                     'word':stim[0],
-                                     'color':stim[1],
-                                     'relation':stim[2],
-                                     'response':response,
-                                     'hit':hit,
-                                     'rt':rt}
-                                   );
-            remove_word();
-            next();
+    var finish_stim = function () {
+        d3.select("#stim")
+            .style("opacity", 0);
+        if (typeof stim.rt === "undefined") {
+            listening = false;
+            stim.rt = -1;
+            stim.hit = null;
+            stim.trialnum = trialnum;
+            stim.uniqueid = uniqueId;
+        }
+        psiTurk.recordTrialData(stim);
+        if (trialnum % 10 === 0) {
+            d3.select("#prompt").html('');
+            d3.select("#stim").html('REST (30 seconds)')
+                .style("opacity", 1);
+            d3.select("#query").html('');
+            setTimeout(function () {
+                d3.select("#stim").html('Press SPACE to continue');
+                listening = true;
+                endOfBreak = true;
+
+            }, 30000);
+        }
+        else {
+            setTimeout(next, 2000);
         }
     };
 
@@ -123,21 +152,16 @@ var StroopExperiment = function() {
         currentview = new Questionnaire();
     };
 
-    var show_word = function(text, color) {
+    var show_word = function(text) {
         d3.select("#stim")
-            .append("div")
-            .attr("id","word")
-            .style("color",color)
             .style("text-align","center")
-            .style("font-size","150px")
-            .style("font-weight","400")
+            .style("opacity", 1)
+            .style("font-size","40px")
+            // .style("font-weight","400")
             .style("margin","20px")
             .text(text);
     };
 
-    var remove_word = function() {
-        d3.select("#word").remove();
-    };
 
 
     // Load the stage.html snippet into the body of the page
@@ -148,7 +172,7 @@ var StroopExperiment = function() {
     $("body").focus().keydown(response_handler);
 
     // Start the test
-    next();
+    setTimeout(next, 2000);
 };
 
 
