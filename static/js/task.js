@@ -112,6 +112,7 @@ var StroopExperiment = function() {
         if (response.length>0) {
             listening = false;
             stim.hit = response === stim.truth;
+            stim.response = response;
             stim.rt = new Date().getTime() - wordon;
             stim.trialnum = trialnum;
             stim.uniqueid = uniqueId;
@@ -149,7 +150,11 @@ var StroopExperiment = function() {
 
     var finish = function() {
         $("body").unbind("keydown", response_handler); // Unbind keys
-        currentview = new Questionnaire();
+        psiTurk.saveData({
+            success: function(){
+                    psiTurk.completeHIT(); 
+            },
+            error: prompt_resubmit});
     };
 
     var show_word = function(text) {
@@ -173,6 +178,24 @@ var StroopExperiment = function() {
 
     // Start the test
     setTimeout(next, 2000);
+
+    resubmit = function() {
+        replaceBody("<h1>Trying to resubmit...</h1>");
+        reprompt = setTimeout(prompt_resubmit, 10000);
+
+        psiTurk.saveData({
+            success: function() {
+                clearInterval(reprompt);
+                psiTurk.completeHIT(); 
+            },
+            error: prompt_resubmit
+        });
+    };
+
+    prompt_resubmit = function() {
+        replaceBody(error_message);
+        $("#resubmit").click(resubmit);
+    };
 };
 
 
@@ -202,18 +225,6 @@ var Questionnaire = function() {
         $("#resubmit").click(resubmit);
     };
 
-    resubmit = function() {
-        replaceBody("<h1>Trying to resubmit...</h1>");
-        reprompt = setTimeout(prompt_resubmit, 10000);
-
-        psiTurk.saveData({
-            success: function() {
-                clearInterval(reprompt);
-                psiTurk.computeBonus('compute_bonus', function(){finish()});
-            },
-            error: prompt_resubmit
-        });
-    };
 
     // Load the questionnaire snippet
     psiTurk.showPage('postquestionnaire.html');
