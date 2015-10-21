@@ -130,7 +130,7 @@ var StroopExperiment = function() {
             stim.uniqueid = uniqueId;
         }
         psiTurk.recordTrialData(stim);
-        if (trialnum % 48 === 0) {
+        if (trialnum % 48 === 0 && stims.length > 0) {
             d3.select("#prompt").html('');
             d3.select("#stim").html('REST (30 seconds)')
                 .style("opacity", 1);
