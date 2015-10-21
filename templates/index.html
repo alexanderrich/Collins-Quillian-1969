@@ -1,0 +1,11 @@
+<html>
+Enter Subject ID here: <input id="subnum" type="text" name="subnum" value=""><br>
+<input id="submit" type="submit" value="Submit">
+<script>
+ document.getElementById("submit").onclick = function () {
+     var n = document.getElementById("subnum").value;
+     window.location.href = "exp?assignmentId=" + n + "&hitId=" + n +
+                            "&workerId=" + n + "&mode=debug"
+ }
+</script>
+</html>
