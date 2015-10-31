@@ -1,20 +1,53 @@
-library("ggplot2")
+# load libraries
 library("dplyr")
+library("ggplot2")
 
-trialdata <- read.csv("participants.csv")
+# load data from the web
+trialdata = read.csv("http://gureckislab.org/courses/fall15/lhc/materials/lab2-fall2015-participants.csv")
 
-indiv_perf <- trialdata %>% group_by(uniqueid) %>%
-  summarize(rt=mean(rt), performance=mean(hit))
+# OR, load data from your computer (after downloading it and moving to the correct folder)
+trialdata = read.csv("lab2-fall2015-participants.csv")
 
-indiv_perf %>%
-  ggplot(aes(rt, performance)) + geom_point()
+# make sure reaction times stored as number, not int (prevents possible error later)
+trialdata$rt = as.numeric(trialdata$rt)
 
-outliers <- indiv_perf %>% filter(performance < .85) %>% .$uniqueid
+# group data by subject and find mean correct for each
+participant_perf = trialdata %>% group_by(uniqueid) %>%
+  summarize(performance=mean(hit))
 
-trialdata %>% filter(hit) %>%
-  filter(!(uniqueid %in% outliers)) %>%
-  filter(truth) %>%
-  group_by(level, type) %>%
-  summarize(rt=mean(rt)) %>%
-  ggplot(aes(x=level, y=rt, group=type)) +
-  geom_line()
+# some example calculations:
+# mean proportion correct
+mean_prop_correct = mean(participant_perf$performance)
+# mean number wrong
+(1 - mean_prop_correct) * 144
+
+# histogram of all data
+hist(trialdata$rt, breaks=seq(0, max(trialdata$rt)+100, 100))
+
+# histogram of rt's less than 6000ms
+low_rts = trialdata %>% filter(rt < 6000)
+hist(low_rts$rt, breaks=seq(0, max(low_rts$rt)+100, 100))
+
+# median rt's for each participant, sentence type, and sentence level
+median_rts = trialdata %>% filter(truth==TRUE)%>% # only use true sentences
+  filter(hit==TRUE) %>% # only use sentences where participant was correct
+  group_by(uniqueid, type, level) %>% # group by the three factors
+  summarize(med_rt=median(rt)) # find median rt in each group
+
+
+# plot median rt's in a histogram, with facet for each type and level
+ggplot(median_rts, aes(x=med_rt)) + geom_histogram(binwidth=200) + facet_grid(type~level)
+
+# run anova and print summary
+fit = aov(med_rt ~ factor(type)*factor(level)+Error(uniqueid), data=median_rts)
+summary(fit)
+
+# group individual medians by type and level and take mean and standard
+# error of medians
+rt_summary = median_rts %>% group_by(type, level) %>%
+  summarize(group_mean=mean(med_rt), group_se=sd(med_rt)/(n()-1))
+
+# plot mean and standard error of medians by group and level
+ggplot(rt_summary, aes(x=level, y=group_mean, color=type)) + geom_line() +
+  geom_pointrange(aes(ymin=group_mean-group_se, ymax=group_mean+group_se))
+
