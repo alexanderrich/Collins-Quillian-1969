@@ -45,7 +45,7 @@ summary(fit)
 # group individual medians by type and level and take mean and standard
 # error of medians
 rt_summary = median_rts %>% group_by(type, level) %>%
-  summarize(group_mean=mean(med_rt), group_se=sd(med_rt)/(n()-1))
+  summarize(group_mean=mean(med_rt), group_se=sd(med_rt)/sqrt(n()))
 
 # plot mean and standard error of medians by group and level
 ggplot(rt_summary, aes(x=level, y=group_mean, color=type)) + geom_line() +
