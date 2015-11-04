@@ -38,16 +38,32 @@ median_rts = trialdata %>% filter(truth==TRUE)%>% # only use true sentences
 # plot median rt's in a histogram, with facet for each type and level
 ggplot(median_rts, aes(x=med_rt)) + geom_histogram(binwidth=200) + facet_grid(type~level)
 
-# run anova and print summary
-fit = aov(med_rt ~ factor(type)*factor(level)+Error(uniqueid), data=median_rts)
-summary(fit)
-
 # group individual medians by type and level and take mean and standard
 # error of medians
 rt_summary = median_rts %>% group_by(type, level) %>%
   summarize(group_mean=mean(med_rt), group_se=sd(med_rt)/sqrt(n()))
 
 # plot mean and standard error of medians by group and level
-ggplot(rt_summary, aes(x=level, y=group_mean, color=type)) + geom_line() +
+ggplot(rt_summary, aes(x=level, y=group_mean, color=type)) + geom_line(aes(group=type)) +
   geom_pointrange(aes(ymin=group_mean-group_se, ymax=group_mean+group_se))
+
+
+# run anova and print summary
+fit = aov(med_rt ~ factor(type)*factor(level)+Error(uniqueid), data=median_rts)
+summary(fit)
+
+# post-hoc bonferroni corrected comparisons
+a=t.test(p0_median_rt$med_rt, p1_median_rt$med_rt,paired=T,alternative="two.sided")
+p.adjust(a$p.value,method="bonferroni",n=6)
+a=t.test(p1_median_rt$med_rt, p2_median_rt$med_rt,paired=T,alternative="two.sided")
+p.adjust(a$p.value,method="bonferroni",n=6)
+a=t.test(p1_median_rt$med_rt, p2_median_rt$med_rt,paired=T,alternative="two.sided")
+p.adjust(a$p.value,method="bonferroni",n=6)
+
+a=t.test(s0_median_rt$med_rt, s1_median_rt$med_rt,paired=T,alternative="two.sided")
+p.adjust(a$p.value,method="bonferroni",n=6)
+a=t.test(s1_median_rt$med_rt, s2_median_rt$med_rt,paired=T,alternative="two.sided")
+p.adjust(a$p.value,method="bonferroni",n=6)
+a=t.test(s1_median_rt$med_rt, s2_median_rt$med_rt,paired=T,alternative="two.sided")
+p.adjust(a$p.value,method="bonferroni",n=6)
 
