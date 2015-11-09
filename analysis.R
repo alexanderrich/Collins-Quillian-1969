@@ -52,6 +52,13 @@ ggplot(rt_summary, aes(x=level, y=group_mean, color=type)) + geom_line(aes(group
 fit = aov(med_rt ~ factor(type)*factor(level)+Error(uniqueid), data=median_rts)
 summary(fit)
 
+p0_median_rt <- median_rts %>% filter(type == "P" & level == 0)
+p1_median_rt <- median_rts %>% filter(type == "P" & level == 1)
+p2_median_rt <- median_rts %>% filter(type == "P" & level == 2)
+s0_median_rt <- median_rts %>% filter(type == "S" & level == 0)
+s1_median_rt <- median_rts %>% filter(type == "S" & level == 1)
+s2_median_rt <- median_rts %>% filter(type == "S" & level == 2)
+
 # post-hoc bonferroni corrected comparisons
 a=t.test(p0_median_rt$med_rt, p1_median_rt$med_rt,paired=T,alternative="two.sided")
 p.adjust(a$p.value,method="bonferroni",n=6)
